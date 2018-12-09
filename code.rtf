@@ -4,33 +4,79 @@ var lastRow = sheet.getLastRow();
 
 var calendar = CalendarApp.getCalendarById("cs637team3@gmail.com");
 
+//Obtains appointment request information from spreadsheet.
 function getRequest(){
+  //portion of code which sets values based on data submitted with request.
   this.timestamp = sheet.getRange(lastRow,1).getValue();
+  this.email = sheet.getRange(lastRow, 2).getValue();
   this.name = sheet.getRange(lastRow, 3).getValue();
   this.date = new Date(sheet.getRange(lastRow,5).getValue());
   this.start_time = sheet.getRange(lastRow, 6).getValue();
   this.end_time = sheet.getRange(lastRow, 7).getValue();
+  
+  //Adjust start time and end time
+  this.date.setHours(this.start_time.getHours());
+  this.date.setMinutes(this.start_time.getMinutes());
+  this.endTime = new Date(this.date);
+  this.endTime.setHours(this.end_time.getHours());
+  this.endTime.setMinutes(this.end_time.getMinutes());
   return this;
 }
 
+//function to check for appointment conflicts
+function conflictCHKR(request){
+  var conflicts = calendar.getEvents(request.date, request.endTime);
+  
+  //For function debugging purposes
+  //Logger.log(conflicts.length);
+  
+  //Sets email subject line and message based on conflicts.
+  if(conflicts.length <1){
+    request.header = "Confirmation - Your appointment has been scheduled.";
+    request.message = "Your appointment has been scehduled.";
+  } else {
+    request.header = "Time Conflict - Your appointment is not scheduled.";
+    request.message = "There appears to be a scheduling conflict with your requested time slot, please submit another appointment request by visiting: https://sunzc5.wixsite.com/barbershop .";
+  }
+  return conflicts.length;
+}
+
+//Creates Google Calendar event from information obtained from appointment request
 function createEvent(request){
-  request.date.setHours(request.start_time.getHours());
-  request.date.setMinutes(request.start_time.getMinutes());
-  var endTime = new Date(request.date);
-  endTime.setHours(request.end_time.getHours());
-  endTime.setMinutes(request.end_time.getMinutes());
   var event = calendar.createEvent(request.name, request.date, endTime);
-  Logger.log(request.name);
+  
+  //For function debugging purposes
+  /*Logger.log(request.name);
   Logger.log(request.date);
-  Logger.log(endTime);
+  Logger.log(endTime);*/
+}
+
+//Function to send email to appointment requester.
+function sendEmail(request){
+  MailApp.sendEmail(request.email, request.header, request.message);
+  
+  //For function debugging purposes
+  /*Logger.log(request.email);
+  Logger.log(request.header);
+  Logger.log(request.message);*/
 }
 
 
-
+//main function
 function main(){
   var request = getRequest();
-  createEvent(request);
-  Logger.log(request.name);
-  Logger.log(request.date);
+  //If get conflitcs returns a value of 1 or higher the event is not created. 
+  if (conflictCHKR(request) < 1){
+    createEvent(request);
+  }
+  //sends email to requestor before finishing main.
+  sendEmail(request);
+  
+  //For function debugging purposes
+  /*Logger.log(request.name);
+  Logger.log(request.date);*/
 }
+
+
+
 
